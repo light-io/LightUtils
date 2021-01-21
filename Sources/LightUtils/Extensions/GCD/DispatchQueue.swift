@@ -1,5 +1,3 @@
-// LightUtils
-//
 // Copyright (c) 2021 light-io
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,18 +20,19 @@
 
 import Foundation
 
-public extension Thread {
-    static func assertIsMain(onError: () -> Void = {}) {
-        if !isMainThread {
-            assertionFailure("Execution on background thread! Expected main thread.")
-            onError()
-        }
+public extension DispatchQueue {
+
+    enum Concurrency {
+        case serial
+        case concurrent
     }
 
-    static func assertIsBackground(onError: () -> Void = {}) {
-        if isMainThread {
-            assertionFailure("Execution on main thread! Expected background thread.")
-            onError()
+    convenience init(_ name: String, concurrency: Concurrency, qos: DispatchQoS = .default) {
+        switch concurrency {
+        case .serial:
+            self.init(label: name, qos: qos)
+        case .concurrent:
+            self.init(label: name, qos: qos, attributes: .concurrent)
         }
     }
 }
