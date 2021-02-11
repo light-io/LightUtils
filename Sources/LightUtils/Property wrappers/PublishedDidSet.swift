@@ -19,24 +19,29 @@
 // SOFTWARE.
 
 import Foundation
+import Combine
 
-public func asyncOnMain(_ work: @escaping () -> Void) {
-    DispatchQueue.main.async(execute: work)
-}
+@propertyWrapper
+public final class PublishedDidSet<Value> {
 
-public extension DispatchQueue {
+    private var value: Value
+    private let subject: CurrentValueSubject<Value, Never>
 
-    enum Concurrency {
-        case serial
-        case concurrent
+    public init(wrappedValue value: Value) {
+        self.value = value
+        subject = CurrentValueSubject(value)
+        wrappedValue = value
     }
 
-    convenience init(_ name: String, concurrency: Concurrency, qos: DispatchQoS = .default) {
-        switch concurrency {
-        case .serial:
-            self.init(label: name, qos: qos)
-        case .concurrent:
-            self.init(label: name, qos: qos, attributes: .concurrent)
+    public var wrappedValue: Value {
+        set {
+            value = newValue
+            subject.send(value)
         }
+        get { value }
+    }
+
+    public var projectedValue: CurrentValueSubject<Value, Never> {
+        get { subject }
     }
 }
