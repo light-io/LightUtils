@@ -20,23 +20,28 @@
 
 import Foundation
 
-public func asyncOnMain(_ work: @escaping () -> Void) {
-    DispatchQueue.main.async(execute: work)
-}
+@propertyWrapper
+public final class Atomic<Value> {
 
-public extension DispatchQueue {
+    public var projectedValue: Atomic<Value> { self }
 
-    enum Concurrency {
-        case serial
-        case concurrent
+    public var wrappedValue: Value {
+        get {
+            queue.sync { self.value }
+        }
+        set {
+            queue.sync { self.value = newValue }
+        }
     }
 
-    convenience init(_ name: String, concurrency: Concurrency, qos: DispatchQoS = .default) {
-        switch concurrency {
-        case .serial:
-            self.init(label: name, qos: qos)
-        case .concurrent:
-            self.init(label: name, qos: qos, attributes: .concurrent)
-        }
+    private let queue = DispatchQueue("atomic_queue_for_\(Value.self)", concurrency: .serial)
+    private var value: Value
+
+    public init(wrappedValue: Value) {
+        self.value = wrappedValue
+    }
+
+    public func mutate(_ transform: (inout Value) -> Void) {
+        queue.sync { transform(&self.value) }
     }
 }
